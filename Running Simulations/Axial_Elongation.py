@@ -15,7 +15,7 @@ from scipy.linalg import block_diag
 
 
 
-zor_loop_values = [8] #[5,10,12,14,15,20]###########################A#################CHANGE THIS
+zor_loop_values = [8] #[5,10,12,14,15,20]
 s_loop_values = [30] #[10,30,50,70,90,110]
 
 s0 = 0
@@ -36,7 +36,7 @@ RADIUS_CONSTANT = zor_loop_values[0]
 cell_df = pd.read_csv("Frames//17S_RF_PSM_Detailed.csv")
 cell_df = cell_df[["ID","Position X Reference Frame","Position Y Reference Frame","Position Z Reference Frame"]]
 
-testcells = 1000
+testcells = -1 #limits the number of cells to be simulated. Used for testing only. Set to -1 when not testing.
 cells_px = cell_df["Position X Reference Frame"].to_numpy()[:testcells]
 cells_py = cell_df["Position Y Reference Frame"].to_numpy()[:testcells]
 cells_pz = cell_df["Position Z Reference Frame"].to_numpy()[:testcells]
