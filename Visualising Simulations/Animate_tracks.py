@@ -50,8 +50,8 @@ PSM_cells = [np.arange(N) for i in range(T_n)]
 #                12, 12, 12, 13, 13, 13, 14, 14, 14, 15, 15, 15, 16, 16, 16, 17, 17, 17, 18, 18, 18, 19, 19, 19]
 
 M = max([np.shape(setFrame(somite_stage[s],str(0))[0])[0] for s in range(len(somite_stage))])
-poo = max([np.shape(setFrame(somite_stage[s],str(0))[3])[0] for s in range(len(somite_stage))])
-print(M,poo)
+moo = max([np.shape(setFrame(somite_stage[s],str(0))[3])[0] for s in range(len(somite_stage))])
+print(M,moo)
 
 red_dot_1 = np.intersect1d(np.intersect1d(np.where(dots_frame_x[1,:] > 50),np.where(dots_frame_x[1,:] < 70)),
                           np.intersect1d(np.where(dots_frame_y[1,:] > -10),np.where(dots_frame_y[1,:] < 10)))
