@@ -1,5 +1,3 @@
-##### zor, s, tau
-
 from mayavi import mlab
 import numpy as np
 import pandas as pd
@@ -11,15 +9,8 @@ from scipy.stats import norm
 from scipy.spatial.distance import pdist, squareform
 from scipy.sparse import csc_matrix
 from scipy.linalg import block_diag
-#from functools import reduce
 
-
-
-zor_loop_values = [8] #[5,10,12,14,15,20]
-s_loop_values = [30] #[10,30,50,70,90,110]
-
-s0 = 0
-r0 = 0
+RADIUS_CONSTANT = 8
 
 f_n = 20 #how many time steps until frame change = (time in s)/tau  ~0.6
 tau = 1800/(f_n*10*1000)#time step increments
@@ -31,12 +22,10 @@ HowManyPartUpdates = 5
 
 saftey_barier = 100
 
-RADIUS_CONSTANT = zor_loop_values[0]
-
 cell_df = pd.read_csv("Frames//17S_RF_PSM_Detailed.csv")
 cell_df = cell_df[["ID","Position X Reference Frame","Position Y Reference Frame","Position Z Reference Frame"]]
 
-testcells = -1 #limits the number of cells to be simulated. Used for testing only. Set to -1 when not testing.
+testcells = 100
 cells_px = cell_df["Position X Reference Frame"].to_numpy()[:testcells]
 cells_py = cell_df["Position Y Reference Frame"].to_numpy()[:testcells]
 cells_pz = cell_df["Position Z Reference Frame"].to_numpy()[:testcells]
@@ -45,8 +34,8 @@ N = np.shape(cells_px)[0] #number of non-border cells
 PSM_cells = np.arange(N)
 
 #Drasco Constants
-radius = np.full(N,RADIUS_CONSTANT)
 
+radius = np.full(N,RADIUS_CONSTANT)
 W = 10**(-5) #energy of adhesive contact (scalar)
 v = np.full(N, 0.3) #?? guessed from supplements#poisson numbers (vector)
 E_vector = np.full(N, 600) #young's moduli (Vector) #450 in paper
@@ -55,10 +44,10 @@ D = 0#0.5*10**1#10**5 #not given in paper #cell diffusion constant
 gamma_ECM = 5*10**(4)#friction coefficent foa cell in the medium (for brownian motion)
 
 
-gamma_perp_cc = 5*10**(4)#5*10**(2)#5*10**(10)
-gamma_para_cc = 5*10**(3)#5*10**(4)#5*10**(10)
-gamma_perp_bo = 0#5*10**(3)#5*10**(6)
-gamma_para_bo = 0#5*10**(4)#5*10**(2)
+gamma_perp_cc = 5*10**(4)
+gamma_para_cc = 5*10**(3)
+gamma_perp_bo = 0
+gamma_para_bo = 0
 
 f_bo = 2*10**(2)
 
@@ -102,10 +91,10 @@ def updatePartition(grid_n, grid_borders, PSM_cells, h): #n=number of partitions
             partition[n_][m_][p_].append(cell_id)
             full_cubes[n_][m_][p_] = 1
         else:
-            print("Problem in updatePartition")
+            print("Problem in updatePartition (probably cells have gone too far away)")
     return [partition, full_cubes]
 
-def setFrame(somite_stage, n, zor):
+def setFrame(somite_stage, n, RADIUS_CONSTANT):
     with open("Frames//"+somite_stage+"_"+ n + ".npy", 'rb') as f: #with open("Frames\\17_18_animation\\17_18_" + n + ".npy", 'rb') as f:
         PSM_x = np.load(f)
         PSM_y = np.load(f)
@@ -131,7 +120,7 @@ def setFrame(somite_stage, n, zor):
                     [np.amin(PSM_z) - saftey_barier,
                      np.amax(PSM_z) + saftey_barier]]
     
-    hash_grid_n = [int(np.ceil((grid_borders[0][1]-grid_borders[0][0])/zor)),int(np.ceil((grid_borders[1][1]-grid_borders[1][0])/zor)),int(np.ceil((grid_borders[2][1]-grid_borders[2][0])/zor))]
+    hash_grid_n = [int(np.ceil((grid_borders[0][1]-grid_borders[0][0])/RADIUS_CONSTANT)),int(np.ceil((grid_borders[1][1]-grid_borders[1][0])/RADIUS_CONSTANT)),int(np.ceil((grid_borders[2][1]-grid_borders[2][0])/RADIUS_CONSTANT))]
     hash_grid_avg_n = [int(np.ceil((grid_borders[0][1]-grid_borders[0][0])/avg_h)),
                        int(np.ceil((grid_borders[1][1]-grid_borders[1][0])/avg_h)),
                        int(np.ceil((grid_borders[2][1]-grid_borders[2][0])/avg_h))]
@@ -203,9 +192,8 @@ def greedyAlgo(x,y,z,part,greedy_vo): #https://en.wikipedia.org/wiki/Nearest_nei
         else:
             escape=True
     return v
-   
-   
-  ##### functions for Couzin cell-cell interactions
+
+##### functions for Couzin cell-cell interactions
 def findDHat(cell_i, test_area): #give r from cell i to all cell IDs. persepa_area = array of all cell ids in perception area (border cell ids come after cell ids)
     if cell_i>N:
         print("ERROR: findRHat i is greater than N")
@@ -216,7 +204,7 @@ def findDHat(cell_i, test_area): #give r from cell i to all cell IDs. persepa_ar
 
     r_length = np.array([np.linalg.norm([r_x[i], r_y[i], r_z[i]]) for i in range(len(r_x))])
 
-    [r_x,r_y,r_z]= np.where(r_length<=zor,[r_x,r_y,r_z],0)
+    [r_x,r_y,r_z]= np.where(r_length<=RADIUS_CONSTANT,[r_x,r_y,r_z],0)
     
     r_hat_x = np.divide(r_x, r_length, out=np.zeros(len(r_x)), where=r_length!=0)
     r_hat_y = np.divide(r_y, r_length, out=np.zeros(len(r_x)), where=r_length!=0)
@@ -229,7 +217,7 @@ def findDHat(cell_i, test_area): #give r from cell i to all cell IDs. persepa_ar
     
     return np.array([d_hat_x,d_hat_y,d_hat_z])
 
-def cellInteractionCouzin(cells_px,cells_py,cells_pz):
+def cellInteractionCouzin(cells_px,cells_py,cells_pz): #not used anymore
     dx = np.zeros(N)
     dy = np.zeros(N)
     dz = np.zeros(N)
@@ -345,150 +333,130 @@ def drascoVelocities(r): #r[0] = cells_px etc #currently using constant radius (
     velocities = conjugate_gradient(Friction, Force)#, M = P)
     #print("cg took ", time.time() - start_conjugate_gradient)
     return (velocities[0][0::3], velocities[0][1::3], velocities[0][2::3])
-    
-    R=r0
-S=s0
-for zor in zor_loop_values:
-    for s in s_loop_values:
-        
-        somite_number=-1
 
-        dots_frame_x = np.zeros((T_n+1,N))
-        dots_frame_y = np.zeros((T_n+1,N))
-        dots_frame_z = np.zeros((T_n+1,N))
-        border_frame = np.zeros(T_n+1)
+somite_number=-1
 
-        dots_frame_x[0] = cells_px[0:N]
-        dots_frame_y[0] = cells_py[0:N]
-        dots_frame_z[0] = cells_pz[0:N]
-        border_frame[0] = surface_boundary_frames[0]
-        
-        start_time = time.time()
-        for t in np.arange(0,T_n):
-            if t%int(T_n/HowManyUpdates)==0:
-                print("Time step: ",t)
-            if t%(f_n)==0: #Border update
-                if t%somite_chop_t== 0:
-                    somite_number += 1
-                    frame_number = -1
-                frame_number += 1
-                print("\t Frame set to", somite_stage[somite_number],"....",surface_boundary_frames[frame_number], "( T =",t,")")
-                
-                
-                [PSM_x, PSM_y, PSM_z, triangles, neighbours, grid_borders,
-                 hash_grid_n, hash_grid_avg_n,
-                 M] = setFrame(somite_stage[somite_number],str(surface_boundary_frames[frame_number]),zor)
-                #print("\t part_n = ",part_n)
-                
-                #avg cells stuff hash_grid_n, grid_borders, PSM_cells
-                [avg_cells_partition, avg_full_cubes] = updatePartition(hash_grid_avg_n, grid_borders, PSM_cells, avg_h)
-                avg_cells = findAvgCells(avg_cells_partition, hash_grid_avg_n, avg_full_cubes)
-                triangle_normals = np.array([getInnerNormal(t,avg_cells,avg_full_cubes) for t in triangles])
-                vertex_normals = np.zeros((M,3))
-                for i in range(M):
-                    vertex_normals[i] = np.average(triangle_normals[np.where(triangles==i)[0]],axis=0)
-            greedy_vo = np.zeros((hash_grid_avg_n))
-            if t%t_updateBC==0 or t%f_n==0: #update border condition stuff
-                print("\t Updating BCs ( T =",t,")")
-                BCs_begin = time.time()
-                for i in range(hash_grid_avg_n[0]):
-                    for j in range(hash_grid_avg_n[1]):
-                        for k in range(hash_grid_avg_n[2]):
-                            greedy_x = grid_borders[0][0] + avg_h*(i + 0.5)
-                            greedy_y = grid_borders[1][0] + avg_h*(j + 0.5)
-                            greedy_z = grid_borders[2][0] + avg_h*(k + 0.5)
-                            greedy_vo[i][j][k] = int(np.argmin([np.linalg.norm([greedy_x-PSM_x[a],
-                                                                                greedy_y-PSM_y[a],
-                                                                                greedy_z-PSM_z[a]]) for a in range(M)]))
-                closest_vertices = [greedyAlgo(cells_px[i], cells_py[i], cells_pz[i],
-                                               findPartition(cells_px[i], cells_py[i], cells_pz[i],
-                                                             hash_grid_avg_n, grid_borders, avg_h), greedy_vo) for i in PSM_cells]
-                BCs_time = time.time() - BCs_begin
-            if t%somite_chop_t== 0 and t!=0: #new somite has formed
-                new_PSM_cells = np.where([isInPSM(i,closest_vertices,vertex_normals) for i in range(len(PSM_cells))],
-                                         PSM_cells,
-                                         np.ones(len(PSM_cells))*(-1))
-                #redo closest_vertices
-                closest_vertices = [closest_vertices[apple] for apple in np.where(new_PSM_cells != -1)[0]]
-                PSM_cells = np.array([new_PSM_cells[apple] for apple in np.where(new_PSM_cells!= -1)[0]]).astype(int)
+dots_frame_x = np.zeros((T_n+1,N))
+dots_frame_y = np.zeros((T_n+1,N))
+dots_frame_z = np.zeros((T_n+1,N))
+border_frame = np.zeros(T_n+1)
 
-            if t%f_n == 0: #update optimisation partition stuff
-                print("\t Updating Optimisation partitions ( T =",t,")")
-                optimisation_begin = time.time()
-                [partition, main_non_empties] = updatePartition(hash_grid_n, grid_borders, PSM_cells, zor)
-                optimisation_time = time.time() - optimisation_begin
-                
-                
-            if t%int(T_n/HowManyUpdates)==0:
-                print("\t Calculating cell movements")
-            cell_movements_begin = time.time()
-            
-            
-            #cell-cell interaction
-            velocities = drascoVelocities([cells_px,cells_py,cells_pz])
-            
-            #print(np.swapaxes(np.array([cells_px, cells_py, cells_pz]),0,1))
-            cells_px += velocities[0]
-            cells_py += velocities[1]
-            cells_pz += velocities[2]
-            ##cell-border interaction
-            #for i in range(len(PSM_cells)):
-            #    n = vertex_normals[closest_vertices[i]]
-            #    closest_v = np.array([PSM_x[closest_vertices[i]], PSM_y[closest_vertices[i]], PSM_z[closest_vertices[i]]])
-            #    dot = np.dot(n,np.array([cells_px[PSM_cells[i]], cells_py[PSM_cells[i]], cells_pz[PSM_cells[i]]]) - closest_v)
-            #    if dot<0:
-            #        #cell has gone outside the border
-            #        [cells_px[PSM_cells[i]],
-            #         cells_py[PSM_cells[i]],
-            #         cells_pz[PSM_cells[i]]] = [cells_px[PSM_cells[i]],
-            #                                    cells_py[PSM_cells[i]],
-           #                                     cells_pz[PSM_cells[i]]] + min(np.abs(dot*border_force),
-           #                                                                   max_border_push)*tau*n
-            
-            dots_frame_x[t+1] = cells_px[0:N]
-            dots_frame_y[t+1] = cells_py[0:N]
-            dots_frame_z[t+1] = cells_pz[0:N]
-            
-            #update partition after movements
-            [partition, main_non_empties] = updatePartition(hash_grid_n, grid_borders, PSM_cells, zor)
-            
-            border_frame[t+1] = surface_boundary_frames[frame_number]
-            cell_movements_time = time.time() - cell_movements_begin
-            if t%np.ceil(T_n/HowManyUpdates)==0:
-                if t==0:
-                    now = time.strftime("%H:%M:%S", time.localtime())
-                    timeuntilend = np.shape(s_loop_values)[0]*np.shape(zor_loop_values)[0]*int((cell_movements_time + BCs_time*(1/t_updateBC) + optimisation_time*(1/t_n))*T_n/60)
-                    print("--- Current time: ", now, "---")
-                    print("--- Estimated time until end: ",timeuntilend,"minutes ---")
-            
+dots_frame_x[0] = cells_px[0:N]
+dots_frame_y[0] = cells_py[0:N]
+dots_frame_z[0] = cells_pz[0:N]
+border_frame[0] = surface_boundary_frames[0]
 
-        print("---", int((time.time() - start_time))/60,"minutes ---")
+start_time = time.time()
+for t in np.arange(0,T_n):
+    if t%int(T_n/HowManyUpdates)==0:
+        print("Time step: ",t)
+    if t%(f_n)==0: #Border update
+        if t%somite_chop_t== 0:
+            somite_number += 1
+            frame_number = -1
+        frame_number += 1
+        print("\t Frame set to", somite_stage[somite_number],"....",surface_boundary_frames[frame_number], "( T =",t,")")
 
-        tracks_x = pd.DataFrame(data=dots_frame_x,index=range(T_n+1),columns=range(N)) 
-        tracks_y = pd.DataFrame(data=dots_frame_y,index=range(T_n+1),columns=range(N)) 
-        tracks_z = pd.DataFrame(data=dots_frame_z,index=range(T_n+1),columns=range(N)) 
-        tracks_frame = pd.DataFrame(data=border_frame)
 
-        tracks_x.to_csv(cwd+'/saves/tracks_x'+'_'+str(R)+'_'+str(S)+'.csv')
-        tracks_y.to_csv(cwd+'/saves/tracks_y'+'_'+str(R)+'_'+str(S)+'.csv')
-        tracks_z.to_csv(cwd+'/saves/tracks_z'+'_'+str(R)+'_'+str(S)+'.csv')
-        tracks_frame.to_csv(cwd+'/saves/tracks_frame'+'_'+str(R)+'_'+str(S)+'.csv')
-                        
-        #reset for next loop
+        [PSM_x, PSM_y, PSM_z, triangles, neighbours, grid_borders,
+         hash_grid_n, hash_grid_avg_n,
+         M] = setFrame(somite_stage[somite_number],str(surface_boundary_frames[frame_number]),RADIUS_CONSTANT)
+        #print("\t part_n = ",part_n)
 
-        cell_df = pd.read_csv('Frames/17S_RF_PSM_Detailed.csv')
-        cell_df = cell_df[["ID","Position X Reference Frame","Position Y Reference Frame","Position Z Reference Frame"]]
+        #avg cells stuff hash_grid_n, grid_borders, PSM_cells
+        [avg_cells_partition, avg_full_cubes] = updatePartition(hash_grid_avg_n, grid_borders, PSM_cells, avg_h)
+        avg_cells = findAvgCells(avg_cells_partition, hash_grid_avg_n, avg_full_cubes)
+        triangle_normals = np.array([getInnerNormal(t,avg_cells,avg_full_cubes) for t in triangles])
+        vertex_normals = np.zeros((M,3))
+        for i in range(M):
+            vertex_normals[i] = np.average(triangle_normals[np.where(triangles==i)[0]],axis=0)
+    greedy_vo = np.zeros((hash_grid_avg_n))
+    if t%t_updateBC==0 or t%f_n==0: #update border condition stuff
+        print("\t Updating BCs ( T =",t,")")
+        BCs_begin = time.time()
+        for i in range(hash_grid_avg_n[0]):
+            for j in range(hash_grid_avg_n[1]):
+                for k in range(hash_grid_avg_n[2]):
+                    greedy_x = grid_borders[0][0] + avg_h*(i + 0.5)
+                    greedy_y = grid_borders[1][0] + avg_h*(j + 0.5)
+                    greedy_z = grid_borders[2][0] + avg_h*(k + 0.5)
+                    greedy_vo[i][j][k] = int(np.argmin([np.linalg.norm([greedy_x-PSM_x[a],
+                                                                        greedy_y-PSM_y[a],
+                                                                        greedy_z-PSM_z[a]]) for a in range(M)]))
+        closest_vertices = [greedyAlgo(cells_px[i], cells_py[i], cells_pz[i],
+                                       findPartition(cells_px[i], cells_py[i], cells_pz[i],
+                                                     hash_grid_avg_n, grid_borders, avg_h), greedy_vo) for i in PSM_cells]
+        BCs_time = time.time() - BCs_begin
+    if t%somite_chop_t== 0 and t!=0: #new somite has formed
+        new_PSM_cells = np.where([isInPSM(i,closest_vertices,vertex_normals) for i in range(len(PSM_cells))],
+                                 PSM_cells,
+                                 np.ones(len(PSM_cells))*(-1))
+        #redo closest_vertices
+        closest_vertices = [closest_vertices[apple] for apple in np.where(new_PSM_cells != -1)[0]]
+        PSM_cells = np.array([new_PSM_cells[apple] for apple in np.where(new_PSM_cells!= -1)[0]]).astype(int)
 
-        cells_px = cell_df["Position X Reference Frame"].to_numpy()
-        cells_py = cell_df["Position Y Reference Frame"].to_numpy()
+    if t%f_n == 0: #update optimisation partition stuff
+        print("\t Updating Optimisation partitions ( T =",t,")")
+        optimisation_begin = time.time()
+        [partition, main_non_empties] = updatePartition(hash_grid_n, grid_borders, PSM_cells, RADIUS_CONSTANT)
+        optimisation_time = time.time() - optimisation_begin
 
-        d_x = np.zeros(N)
-        d_y = np.zeros(N)
-        d_z = np.zeros(N)
 
-        S=S+1
-    R=R+1
-    S=s0
+    if t%int(T_n/HowManyUpdates)==0:
+        print("\t Calculating cell movements")
+    cell_movements_begin = time.time()
+
+
+    #cell-cell interaction
+    velocities = drascoVelocities([cells_px,cells_py,cells_pz])
+
+    #print(np.swapaxes(np.array([cells_px, cells_py, cells_pz]),0,1))
+    cells_px += velocities[0]
+    cells_py += velocities[1]
+    cells_pz += velocities[2]
+    ##cell-border interaction
+    #for i in range(len(PSM_cells)):
+    #    n = vertex_normals[closest_vertices[i]]
+    #    closest_v = np.array([PSM_x[closest_vertices[i]], PSM_y[closest_vertices[i]], PSM_z[closest_vertices[i]]])
+    #    dot = np.dot(n,np.array([cells_px[PSM_cells[i]], cells_py[PSM_cells[i]], cells_pz[PSM_cells[i]]]) - closest_v)
+    #    if dot<0:
+    #        #cell has gone outside the border
+    #        [cells_px[PSM_cells[i]],
+    #         cells_py[PSM_cells[i]],
+    #         cells_pz[PSM_cells[i]]] = [cells_px[PSM_cells[i]],
+    #                                    cells_py[PSM_cells[i]],
+    #                                    cells_pz[PSM_cells[i]]] + min(np.abs(dot*border_force),
+    #                                                                   max_border_push)*tau*n
+
+    dots_frame_x[t+1] = cells_px[0:N]
+    dots_frame_y[t+1] = cells_py[0:N]
+    dots_frame_z[t+1] = cells_pz[0:N]
+
+    #update partition after movements
+    [partition, main_non_empties] = updatePartition(hash_grid_n, grid_borders, PSM_cells, RADIUS_CONSTANT)
+
+    border_frame[t+1] = surface_boundary_frames[frame_number]
+    cell_movements_time = time.time() - cell_movements_begin
+    if t%np.ceil(T_n/HowManyUpdates)==0:
+        if t==0:
+            now = time.strftime("%H:%M:%S", time.localtime())
+            timeuntilend = int((cell_movements_time + BCs_time*(1/t_updateBC) + optimisation_time*(1/t_n))*T_n/60)
+            print("--- Current time: ", now, "---")
+            print("--- Estimated time until end: ",timeuntilend,"minutes ---")
+
+
+print("---", int((time.time() - start_time))/60,"minutes ---")
+
+tracks_x = pd.DataFrame(data=dots_frame_x,index=range(T_n+1),columns=range(N)) 
+tracks_y = pd.DataFrame(data=dots_frame_y,index=range(T_n+1),columns=range(N)) 
+tracks_z = pd.DataFrame(data=dots_frame_z,index=range(T_n+1),columns=range(N)) 
+tracks_frame = pd.DataFrame(data=border_frame)
+
+tracks_x.to_csv(cwd+'/saves/tracks_x'+'_'+str(0)+'_'+str(0)+'.csv')
+tracks_y.to_csv(cwd+'/saves/tracks_y'+'_'+str(0)+'_'+str(0)+'.csv')
+tracks_z.to_csv(cwd+'/saves/tracks_z'+'_'+str(0)+'_'+str(0)+'.csv')
+tracks_frame.to_csv(cwd+'/saves/tracks_frame'+'_'+str(0)+'_'+str(0)+'.csv')
+
 print("done")
 
 from shutil import make_archive
