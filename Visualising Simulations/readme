@@ -4,5 +4,5 @@ These were all run locally on my laptop.
 
 The most important script here is Animate_tracks.py, which plots the output .csv files from main.py using Mayavi.
 Find_Cell_Tracking.py outputs single frames for each simulation (e.g used in Fig. 3.2 in my master's report).
-nearest_neighbours_analysis.py outputs does what it says on the tin.
+nearest_neighbours_analysis.py does what it says on the tin.
  
