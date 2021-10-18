@@ -1,1 +1,15 @@
 
+RUNNING SIMULATIONS
+
+This was done remotely on Porcupine using Jupyter notebooks. Porcupine is a supercomputer in the Steventon Lab.
+
+The file organisation is as follows:
+-Running Simulations
+  -main.py
+  -Frames
+    -17_18_0.npy
+    -17_18_10.npy
+    -17_18_20.npy
+    ....
+    -17_18_100.npy
+    -17S_RF_PSM_Detailed.csv
