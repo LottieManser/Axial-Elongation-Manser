@@ -13,19 +13,19 @@ from scipy.linalg import block_diag
 RADIUS_CONSTANT = 8
 
 f_n = 20 #how many time steps until frame change = (time in s)/tau  ~0.6
-tau = 1800/(f_n*10*1000)#time step increments
+tau = 1800/(f_n*10*1000) #time step increments
 somite_chop_t = f_n*10000
 T_n = f_n*5 #number of time steps = (time in s)/tau #10
 HowManyUpdates = f_n #how many updates are printed (so you can see what's going on)
 HowManyUpdates = min(HowManyUpdates, T_n)
 HowManyPartUpdates = 5
 
-saftey_barier = 100
+saftey_barier = 100 #The grids for optimisation are made big enough to cover the whole PSM surface, plus saftey_barrier in all directions.
 
 cell_df = pd.read_csv("Frames//17S_RF_PSM_Detailed.csv")
 cell_df = cell_df[["ID","Position X Reference Frame","Position Y Reference Frame","Position Z Reference Frame"]]
 
-testcells = 100
+testcells = -n #if you want to run a simulation with just the first m cells (eg for testing), set this to m
 cells_px = cell_df["Position X Reference Frame"].to_numpy()[:testcells]
 cells_py = cell_df["Position Y Reference Frame"].to_numpy()[:testcells]
 cells_pz = cell_df["Position Z Reference Frame"].to_numpy()[:testcells]
@@ -35,12 +35,12 @@ PSM_cells = np.arange(N)
 
 #Drasco Constants
 
-radius = np.full(N,RADIUS_CONSTANT)
+radius = np.full(N,RADIUS_CONSTANT) #cell radii. Constant for now.
 W = 10**(-5) #energy of adhesive contact (scalar)
 v = np.full(N, 0.3) #?? guessed from supplements#poisson numbers (vector)
 E_vector = np.full(N, 600) #young's moduli (Vector) #450 in paper
 E = np.array([[1/((1-v[i]**2)/E_vector[i]+(1-v[j]**2)/E_vector[j]) for j in range(N)] for i in range(N)])
-D = 0#0.5*10**1#10**5 #not given in paper #cell diffusion constant
+D = 0 #not given in paper #cell diffusion constant
 gamma_ECM = 5*10**(4)#friction coefficent foa cell in the medium (for brownian motion)
 
 
@@ -69,7 +69,7 @@ cwd = os.getcwd()
 
 #for optimisation
 
-def findPartition(x, y, z, grid_n, grid_borders, h): #coords of cell, n=number of partitions
+def findPartition(x, y, z, grid_n, grid_borders, h): # Finds the partition (regarding the grid given) of the given cell. x,y,z = coords of cell
     new_cell = np.array([x,y,z]) - np.array([grid_borders[0][0],grid_borders[1][0],grid_borders[2][0]])
     [n_,m_,p_] = [int(np.floor(new_cell[0]/h)),
                   int(np.floor(new_cell[1]/h)), 
@@ -80,7 +80,7 @@ def findPartition(x, y, z, grid_n, grid_borders, h): #coords of cell, n=number o
         [n_,m_,p_] = grid_n-[1,1,1]
     return np.array([n_,m_,p_])
 
-def updatePartition(grid_n, grid_borders, PSM_cells, h): #n=number of partitions  ##n???
+def updatePartition(grid_n, grid_borders, PSM_cells, h): #updates the partition variable. The partition variable holds the information for which cells are in each partition.
     partition = [[[[] for i in range(grid_n[2])] for i in range(grid_n[1])] for i in range(grid_n[0])]
     full_cubes = np.zeros((grid_n[0], grid_n[1], grid_n[2]), dtype=int)
     for cell_id in range(len(PSM_cells)):
@@ -94,7 +94,7 @@ def updatePartition(grid_n, grid_borders, PSM_cells, h): #n=number of partitions
             print("Problem in updatePartition (probably cells have gone too far away)")
     return [partition, full_cubes]
 
-def setFrame(somite_stage, n, RADIUS_CONSTANT):
+def setFrame(somite_stage, n, RADIUS_CONSTANT): #setFrame i.e update animation
     with open("Frames//"+somite_stage+"_"+ n + ".npy", 'rb') as f: #with open("Frames\\17_18_animation\\17_18_" + n + ".npy", 'rb') as f:
         PSM_x = np.load(f)
         PSM_y = np.load(f)
@@ -163,7 +163,7 @@ def getInnerNormal(triangle, avg_cells, avg_full_cubes): #triangle as given from
     else:
         return -n_hat
     
-def findAvgCells(partitionion, hash_grid_avg_n, full_cubes):
+def findAvgCells(partitionion, hash_grid_avg_n, full_cubes): #finds the average coordinates of all cells in given partition.
     avg_x = np.zeros(hash_grid_avg_n)
     avg_y = np.zeros(hash_grid_avg_n)
     avg_z = np.zeros(hash_grid_avg_n)
@@ -193,7 +193,7 @@ def greedyAlgo(x,y,z,part,greedy_vo): #https://en.wikipedia.org/wiki/Nearest_nei
             escape=True
     return v
 
-##### functions for Couzin cell-cell interactions
+##### functions for Couzin cell-cell interactions (not used anymore but kept for legacy)
 def findDHat(cell_i, test_area): #give r from cell i to all cell IDs. persepa_area = array of all cell ids in perception area (border cell ids come after cell ids)
     if cell_i>N:
         print("ERROR: findRHat i is greater than N")
@@ -243,6 +243,7 @@ def cellInteractionCouzin(cells_px,cells_py,cells_pz): #not used anymore
     cells_pz += s*tau*dz
     return(cells_px,cells_py, cells_pz)
 
+####New Van Liedekerke/Drasdo Model
 def drascoVelocities(r): #r[0] = cells_px etc #currently using constant radius (can implement pressue). plus border force
     r = np.array(r)
     r = np.ndarray.transpose(r)
@@ -330,7 +331,7 @@ def drascoVelocities(r): #r[0] = cells_px etc #currently using constant radius (
     #P = np.zeros((N*3,N*3))
     #np.fill_diagonal(P, np.diag(Friction)) #Jacobi preconditioner
     Friction = csc_matrix(Friction)
-    velocities = conjugate_gradient(Friction, Force)#, M = P)
+    velocities = conjugate_gradient(Friction, Force)#, M = P) #last bit is for a preconditioner
     #print("cg took ", time.time() - start_conjugate_gradient)
     return (velocities[0][0::3], velocities[0][1::3], velocities[0][2::3])
 
@@ -414,7 +415,7 @@ for t in np.arange(0,T_n):
     cells_px += velocities[0]
     cells_py += velocities[1]
     cells_pz += velocities[2]
-    ##cell-border interaction
+    ##cell-border interaction (old version. Still working if you uncomment)
     #for i in range(len(PSM_cells)):
     #    n = vertex_normals[closest_vertices[i]]
     #    closest_v = np.array([PSM_x[closest_vertices[i]], PSM_y[closest_vertices[i]], PSM_z[closest_vertices[i]]])
