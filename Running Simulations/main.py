@@ -147,12 +147,12 @@ def getInnerNormal(triangle, avg_cells, avg_full_cubes): #triangle as given from
     for i in range(3):
         for j in range(3):
             for k in range(3):
-                pirate = min(max(0,n_-1+i),hash_grid_avg_n[0]-1)
-                demon  = min(max(0,m_-1+j),hash_grid_avg_n[1]-1)
-                ninja  = min(max(0,p_-1+k),hash_grid_avg_n[2]-1)
-                surrounding_avg_cells_x = np.union1d(surrounding_avg_cells_x, avg_cells[0][pirate][demon][ninja])
-                surrounding_avg_cells_y = np.union1d(surrounding_avg_cells_y, avg_cells[1][pirate][demon][ninja])
-                surrounding_avg_cells_z = np.union1d(surrounding_avg_cells_z, avg_cells[2][pirate][demon][ninja])
+                temp_x = min(max(0,n_-1+i),hash_grid_avg_n[0]-1)
+                temp_y  = min(max(0,m_-1+j),hash_grid_avg_n[1]-1)
+                temp_z  = min(max(0,p_-1+k),hash_grid_avg_n[2]-1)
+                surrounding_avg_cells_x = np.union1d(surrounding_avg_cells_x, avg_cells[0][temp_x][temp_y][temp_z])
+                surrounding_avg_cells_y = np.union1d(surrounding_avg_cells_y, avg_cells[1][temp_x][temp_y][temp_z])
+                surrounding_avg_cells_z = np.union1d(surrounding_avg_cells_z, avg_cells[2][temp_x][temp_y][temp_z])
     
     test_point = [np.average(surrounding_avg_cells_x[np.where(surrounding_avg_cells_x!=0)]),
                   np.average(surrounding_avg_cells_y[np.where(surrounding_avg_cells_y!=0)]),
@@ -231,10 +231,10 @@ def cellInteractionCouzin(cells_px,cells_py,cells_pz): #not used anymore
                     for i in range(3):
                         for j in range(3):
                             for k in range(3):
-                                pirate = min(max(0,n_-1+i),hash_grid_n[0]-1)
-                                demon  = min(max(0,m_-1+j),hash_grid_n[1]-1)
-                                ninja  = min(max(0,p_-1+k),hash_grid_n[2]-1)
-                                perception = np.union1d(perception, partition[pirate][demon][ninja])
+                                temp_x = min(max(0,n_-1+i),hash_grid_n[0]-1)
+                                temp_y  = min(max(0,m_-1+j),hash_grid_n[1]-1)
+                                temp_z  = min(max(0,p_-1+k),hash_grid_n[2]-1)
+                                perception = np.union1d(perception, partition[temp_x][temp_y][temp_z])
                     perception = [int(banana) for banana in np.unique(perception)]
                     for i in part:
                         [dx[i],dy[i],dz[i]] = findDHat(i, perception)
@@ -267,10 +267,10 @@ def drascoVelocities(r): #r[0] = cells_px etc #currently using constant radius (
                     for i in range(3):
                         for j in range(3):
                             for k in range(3):
-                                pirate = min(max(0,n_-1+i),hash_grid_n[0]-1)
-                                demon  = min(max(0,m_-1+j),hash_grid_n[1]-1)
-                                ninja  = min(max(0,p_-1+k),hash_grid_n[2]-1)
-                                perception = np.union1d(perception, partition[pirate][demon][ninja])
+                                temp_x = min(max(0,n_-1+i),hash_grid_n[0]-1)
+                                temp_y  = min(max(0,m_-1+j),hash_grid_n[1]-1)
+                                temp_z  = min(max(0,p_-1+k),hash_grid_n[2]-1)
+                                perception = np.union1d(perception, partition[temp_x][temp_y][temp_z])
                     perception = [int(banana) for banana in np.unique(perception)]
                     for i in perception:
                         for j in perception:
